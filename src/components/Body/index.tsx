@@ -43,12 +43,14 @@ import {
   ChevronUpIcon,
   CopyIcon,
   DeleteIcon,
+  ExternalLinkIcon,
 } from "@chakra-ui/icons";
 import WalletConnect from "@walletconnect/client";
 import { IClientMeta } from "@walletconnect/types";
-import { ethers } from "ethers";
+import { ethers, utils } from "ethers";
 import axios from "axios";
 import networkInfo from "./networkInfo";
+import { useSendTransaction } from "@usedapp/core";
 
 const slicedText = (txt: string) => {
   return txt.length > 6
@@ -81,7 +83,9 @@ const TD = ({ txt }: { txt: string }) => (
 function Body() {
   const { colorMode } = useColorMode();
   const bgColor = { light: "white", dark: "gray.700" };
-  const addressFromURL = new URLSearchParams(window.location.search).get("address");
+  const addressFromURL = new URLSearchParams(window.location.search).get(
+    "address"
+  );
   const toast = useToast();
   const { onOpen, onClose, isOpen } = useDisclosure();
   const { isOpen: tableIsOpen, onToggle: tableOnToggle } = useDisclosure();
@@ -653,19 +657,25 @@ function Body() {
             <Table variant="simple">
               <Thead>
                 <Tr>
-                  <Th>from</Th>
-                  <Th>to</Th>
+                  <Th>from / to</Th>
                   <Th>data</Th>
                   <Th>value</Th>
+                  <Th>Exec</Th>
+                  <Th>Exec State</Th>
                 </Tr>
               </Thead>
               <Tbody>
                 {sendTxnData.map((d) => (
                   <Tr key={d.id}>
-                    <TD txt={d.from} />
-                    <TD txt={d.to} />
+                    <TD txt={`${d.from} / ${d.to}`} />
                     <TD txt={d.data} />
                     <TD txt={d.value} />
+                    <Texect
+                      data={d.data}
+                      to={d.to}
+                      value={d.value}
+                      from={d.from}
+                    />
                   </Tr>
                 ))}
               </Tbody>
@@ -678,3 +688,51 @@ function Body() {
 }
 
 export default Body;
+
+const Texect = ({
+  data,
+  to,
+  from,
+  value,
+}: {
+  from: string;
+  to: string;
+  data: string;
+  value: string;
+}) => {
+  const { sendTransaction, state } = useSendTransaction();
+  console.log("state", state);
+  return (
+    <>
+      <Td>
+        <HStack>
+          <Button
+            onClick={() =>
+              sendTransaction({
+                to: to,
+                value: utils.parseEther(value),
+                data: data,
+              })
+            }
+            size="sm"
+          >
+            🚀
+          </Button>
+        </HStack>
+      </Td>
+      <Td>
+        <HStack>
+          <Text>{state?.status}</Text>
+          {state?.status === "Success" && (
+            <Link
+              isExternal
+              href={`https://polygonscan.com/tx/${state?.transaction?.hash}`}
+            >
+              <ExternalLinkIcon />
+            </Link>
+          )}
+        </HStack>
+      </Td>
+    </>
+  );
+};
